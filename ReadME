@@ -1,5 +1,7 @@
 # Static Code Analyzer
-<h2>Commands to run the Project</h2>
+-- Tokenize c, c++, python code and show compile time errors
+
+# Commands to run the Project
 -- open command prompt at directory
 -- make
 -- main.exe
