@@ -1,0 +1,7 @@
+Line 5: Undeclared variable 'z'
+Line 6: Undeclared variable 'ina'
+Line 6: Undeclared variable 'br'
+Line 6: Missing semicolon
+Line 7: Missing semicolon
+
+--- End of Compile-Time Error Report ---

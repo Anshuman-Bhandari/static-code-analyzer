@@ -1,0 +1,28 @@
+Header File: #include <stdio.h> (Line 1)
+Line Number: 1
+Keyword: int (Line 2)
+Variable Declaration: x (Line 2)
+Semicolon Detected (Line 2)
+Line Number: 2
+Function Declaration: int main() (Line 3)
+Left Brace (Line 3)
+Line Number: 3
+Keyword: int (Line 4)
+Variable Declaration: a (Line 4)
+Semicolon Detected (Line 4)
+Line Number: 4
+Identifier: z (Line 5)
+Assignment Operator: = (Line 5)
+Number: 5 (Line 5)
+Semicolon Detected (Line 5)
+Line Number: 5
+Identifier: ina (Line 6)
+Identifier: br (Line 6)
+Line Number: 6
+Keyword: return (Line 7)
+Number: 0 (Line 7)
+Line Number: 7
+Right Brace (Line 8)
+Line Number: 8
+
+--- End of Token List ---
