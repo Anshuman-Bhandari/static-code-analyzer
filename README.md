@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Static Code Analyzer Project
 
 A modern static code analyzer with a graphical user interface that helps detect potential issues in C, C++, and Python code files.
@@ -92,3 +93,6 @@ make        # Build the project
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details. 
+=======
+# Static-Code-Analyzer-Project
+>>>>>>> 11a32da2a3cce4896f6d02ccef49dd9145ccf1db
