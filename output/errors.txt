@@ -1,6 +1,7 @@
-Line 3: unknown_var 'c'
-Line 5: unknown_var 'z'
-Line 8: indentation error
-Line 11: missing ':'
+Line 5: Undeclared identifier 'b'
+Line 6: 'cout' is not declared. Did you forget 'using namespace std' or 'std::'?
+Line 6: Undeclared identifier 'cout'
+Line 8: Undeclared identifier 'w'
 
 --- End of Compile-Time Error Report ---
+Total errors: 6
