@@ -1,13 +1,48 @@
-Function Definition (Line 1)
-Function Call/Definition: greet (Line 1)
-Identifier: name (Line 1)
-Delimiter: ) (Line 1)
-End of Line 1
-Function Call/Definition: print (Line 2)
-String Literal: "Hello," (Line 2)
-Delimiter: , (Line 2)
-Identifier: name (Line 2)
-Delimiter: ) (Line 2)
-End of Line 2
+Include directive: #include<iostream> (Line 1)
+Line Number: 1
+Keyword: int (Line 2)
+Identifier: main (Line 2)
+Operator: () (Line 2)
+Line Number: 2
+Left Brace (Line 3)
+Line Number: 3
+Keyword: int (Line 4)
+Identifier: a (Line 4)
+Assignment Operator: = (Line 4)
+Number: 5 (Line 4)
+Semicolon Detected (Line 4)
+Line Number: 4
+Identifier: b (Line 5)
+Assignment Operator: = (Line 5)
+Number: 6 (Line 5)
+Semicolon Detected (Line 5)
+Line Number: 5
+Identifier: cout (Line 6)
+Identifier: a (Line 6)
+Semicolon Detected (Line 6)
+Line Number: 6
+Keyword: int (Line 7)
+Identifier: x (Line 7)
+Assignment Operator: = (Line 7)
+Number: 10 (Line 7)
+Semicolon Detected (Line 7)
+Line Number: 7
+Identifier: w (Line 8)
+Assignment Operator: = (Line 8)
+Identifier: a (Line 8)
+Operator: + (Line 8)
+Identifier: x (Line 8)
+Semicolon Detected (Line 8)
+Line Number: 8
+Keyword: return (Line 9)
+Number: 0 (Line 9)
+Semicolon Detected (Line 9)
+Line Number: 9
+Keyword: return (Line 10)
+Number: 1 (Line 10)
+Semicolon Detected (Line 10)
+Line Number: 10
+Right Brace (Line 11)
+Line Number: 11
 
 --- End of Token List ---

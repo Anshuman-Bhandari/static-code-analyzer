@@ -2,7 +2,7 @@
 int x;
 int main() {
     int a;
-    z = 5;
-    ina br
-    return 0
+    z = 5
+    ina br;
+    return 0;
 }

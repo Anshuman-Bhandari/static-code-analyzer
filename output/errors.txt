@@ -1,2 +1,6 @@
+Line 3: unknown_var 'c'
+Line 5: unknown_var 'z'
+Line 8: indentation error
+Line 11: missing ':'
 
 --- End of Compile-Time Error Report ---

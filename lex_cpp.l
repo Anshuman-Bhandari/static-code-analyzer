@@ -17,9 +17,8 @@ char current_class[50] = "";
 int expecting_value = 0;
 int access_specifier = 0;  // 0: private, 1: public, 2: protected
 int in_namespace_std = 0;  // Track if 'using namespace std' is active
-int in_template = 0;      // Track if we're in a template declaration
+int in_template = 0;
 int in_function = 0;
-int expecting_colon = 0;
 char current_scope[50] = "global";
 int has_iostream = 0;
 int has_string = 0;
@@ -33,17 +32,16 @@ typedef struct {
     char type[50];
     int is_initialized;
     int line_declared;
-    char class_name[50];  // For class members
+    char class_name[50];
     int is_const;
-    int access_level;     // 0: private, 1: public, 2: protected
-    int is_template;      // Whether this is a template type
-    char scope[50];        // Added for scope tracking
+    int access_level;
+    int is_template;
+    char scope[50];
 } Variable;
 
 Variable vars[MAX_VARS];
 int var_count = 0;
 
-// Standard library headers
 char std_headers[MAX_STD_HEADERS][50] = {
     "iostream", "string", "vector", "map", "set",
     "algorithm", "memory", "utility", "cmath", "cstdlib",
@@ -51,45 +49,48 @@ char std_headers[MAX_STD_HEADERS][50] = {
     "deque", "queue", "stack", "list", "bitset"
 };
 
-// Standard library symbols
 char std_symbols[MAX_STD_SYMBOLS][50] = {
-    // IO streams
     "cout", "cin", "cerr", "clog", "endl", "flush", "ws",
-    // String operations
     "string", "getline", "to_string", "stoi", "stol", "stof", "stod",
-    // Containers
     "vector", "map", "set", "list", "queue", "stack", "deque", 
     "pair", "array", "forward_list", "multiset", "multimap",
     "unordered_map", "unordered_set", "priority_queue", "bitset",
-    // Algorithms
     "sort", "find", "reverse", "count", "max", "min", "swap",
-    // Memory
     "shared_ptr", "unique_ptr", "weak_ptr", "make_shared", "make_unique",
-    // Types
     "size_t", "string_view", "nullptr_t", "initializer_list",
-    // Stream types
     "ostream", "istream", "fstream", "stringstream", "ofstream", "ifstream",
-    // Additional common symbols
     "begin", "end", "rbegin", "rend", "push_back", "pop_back", "emplace_back",
     "insert", "erase", "clear", "size", "empty", "front", "back"
 };
 
 void add_std_symbols() {
-    if (in_namespace_std) {
+    static int std_symbols_added = 0;
+    if (in_namespace_std && !std_symbols_added) {
         for(int i = 0; i < MAX_STD_SYMBOLS; i++) {
             if(strlen(std_symbols[i]) > 0) {
-                strcpy(vars[var_count].name, std_symbols[i]);
-                strcpy(vars[var_count].type, "std");
-                vars[var_count].is_initialized = 1;
-                strcpy(vars[var_count].scope, "global");
-                var_count++;
+                int exists = 0;
+                for(int j = 0; j < var_count; j++) {
+                    if(strcmp(vars[j].name, std_symbols[i]) == 0 && 
+                       strcmp(vars[j].scope, "global") == 0) {
+                        exists = 1;
+                        break;
+                    }
+                }
+                if(!exists) {
+                    strcpy(vars[var_count].name, std_symbols[i]);
+                    strcpy(vars[var_count].type, "std");
+                    vars[var_count].is_initialized = 1;
+                    vars[var_count].line_declared = line_number;
+                    strcpy(vars[var_count].scope, "global");
+                    var_count++;
+                }
             }
         }
+        std_symbols_added = 1;
     }
 }
 
 void add_var(const char *var, const char *type) {
-    // Don't add if it's already in std namespace
     if(in_namespace_std) {
         for(int i = 0; i < MAX_STD_SYMBOLS; i++) {
             if(strcmp(std_symbols[i], var) == 0) {
@@ -98,67 +99,70 @@ void add_var(const char *var, const char *type) {
         }
     }
 
-    // Check for redefinition
     for (int i = 0; i < var_count; i++) {
-        if (strcmp(vars[i].name, var) == 0) {
-            return;  // Allow redefinition in C++
+        if (strcmp(vars[i].name, var) == 0 && strcmp(vars[i].scope, current_scope) == 0) {
+            fprintf(error_output, "Line %d: Redefinition of '%s'\n", line_number, var);
+            errors++;
+            return;
         }
     }
 
     if (var_count < MAX_VARS) {
         strcpy(vars[var_count].name, var);
         strcpy(vars[var_count].type, type);
-        vars[var_count].is_initialized = 1;
+        vars[var_count].is_initialized = 0;
         vars[var_count].line_declared = line_number;
         strcpy(vars[var_count].class_name, current_class);
         vars[var_count].access_level = access_specifier;
+        strcpy(vars[var_count].scope, current_scope);
         var_count++;
     }
 }
 
 Variable* get_var(const char *var) {
-    // Check if using iostream without include
-    if (!has_iostream && (strcmp(var, "cout") == 0 || strcmp(var, "endl") == 0 || strcmp(var, "cin") == 0)) {
-        fprintf(error_output, "Line %d: Using iostream symbols without #include <iostream>\n", line_number);
-        errors++;
-        return NULL;
-    }
-
-    // Check if using string without include
-    if (!has_string && strcmp(var, "string") == 0) {
-        fprintf(error_output, "Line %d: Using string without #include <string>\n", line_number);
-        errors++;
-        return NULL;
-    }
-
-    // Check if it's a standard symbol and we're using namespace std
     if(in_namespace_std) {
         for(int i = 0; i < MAX_STD_SYMBOLS; i++) {
             if(strcmp(std_symbols[i], var) == 0) {
-                return NULL;  // Allow use of std symbols
+                if ((strcmp(var, "cout") == 0 || strcmp(var, "cin") == 0 || 
+                    strcmp(var, "endl") == 0) && !has_iostream) {
+                    fprintf(error_output, "Line %d: Using iostream symbols without #include <iostream>\n", line_number);
+                    errors++;
+                    return NULL;
+                }
+                if (strcmp(var, "string") == 0 && !has_string) {
+                    fprintf(error_output, "Line %d: Using string without #include <string>\n", line_number);
+                    errors++;
+                    return NULL;
+                }
+                return NULL;
             }
         }
     }
 
-    // Check if it's a std:: qualified name
     char std_prefix[] = "std::";
     if (strncmp(var, std_prefix, strlen(std_prefix)) == 0) {
         const char *symbol = var + strlen(std_prefix);
         for(int i = 0; i < MAX_STD_SYMBOLS; i++) {
             if(strcmp(std_symbols[i], symbol) == 0) {
-                return NULL;  // Allow use of std:: qualified symbols
+                return NULL;
             }
         }
     }
 
-    // Check variables in current scope
     for (int i = 0; i < var_count; i++) {
-        if (strcmp(vars[i].name, var) == 0) {
+        if (strcmp(vars[i].name, var) == 0 && strcmp(vars[i].scope, current_scope) == 0) {
             return &vars[i];
         }
     }
 
-    // If we get here and the symbol is in std but we're not using namespace std
+    if (strcmp(current_scope, "global") != 0) {
+        for (int i = 0; i < var_count; i++) {
+            if (strcmp(vars[i].name, var) == 0 && strcmp(vars[i].scope, "global") == 0) {
+                return &vars[i];
+            }
+        }
+    }
+
     for(int i = 0; i < MAX_STD_SYMBOLS; i++) {
         if(strcmp(std_symbols[i], var) == 0) {
             fprintf(error_output, "Line %d: '%s' is not declared. Did you forget 'using namespace std' or 'std::'?\n", 
@@ -167,8 +171,6 @@ Variable* get_var(const char *var) {
             return NULL;
         }
     }
-
-    fprintf(error_output, "Line %d: Undeclared identifier '%s'\n", line_number, var);
     errors++;
     return NULL;
 }
@@ -198,7 +200,7 @@ void check_type_mismatch(const char *value) {
 void check_access_violation(const char *var) {
     Variable *v = get_var(var);
     if (v != NULL && strlen(v->class_name) > 0) {
-        if (v->access_level == 0) {  // private
+        if (v->access_level == 0 && strcmp(current_scope, v->class_name) != 0) {
             fprintf(error_output, "Line %d: Accessing private member '%s'\n", line_number, var);
             errors++;
         }
@@ -248,7 +250,7 @@ COMMENT \/\/.*$|\/\*([^*]|\*[^\/])*\*\/
 "using"[ \t]+"namespace"[ \t]+"std" {
                     fprintf(output, "Using namespace std (Line %d)\n", line_number);
                     in_namespace_std = 1;
-                    add_std_symbols();
+                    semicolon_expected = 1;
                 }
 
 "std::"       {
@@ -258,14 +260,8 @@ COMMENT \/\/.*$|\/\*([^*]|\*[^\/])*\*\/
 "namespace"   {
                     fprintf(output, "Namespace Keyword (Line %d)\n", line_number);
                 }
+                
 
-{TEMPLATE_START} {
-                    fprintf(output, "Template Declaration Start (Line %d)\n", line_number);
-                }
-
-{TEMPLATE_END} {
-                    fprintf(output, "Template Declaration End (Line %d)\n", line_number);
-                }
 
 {NAMESPACE_START} {
                     fprintf(output, "Namespace Declaration (Line %d)\n", line_number);
@@ -279,15 +275,18 @@ COMMENT \/\/.*$|\/\*([^*]|\*[^\/])*\*\/
                     fprintf(output, "Dynamic Memory Deallocation (Line %d)\n", line_number);
                 }
 
-{REFERENCE}   {
-                    fprintf(output, "Reference Type (Line %d)\n", line_number);
-                    strcat(current_type, "&");
-                }
+
 
 "class"        {
                     fprintf(output, "Class Declaration (Line %d)\n", line_number);
                     in_class = 1;
-                    access_specifier = 0;  // default is private
+                    access_specifier = 0;
+                }
+
+"struct"       {
+                    fprintf(output, "Struct Declaration (Line %d)\n", line_number);
+                    in_class = 1;
+                    access_specifier = 1;
                 }
 
 "public:"      {
@@ -310,15 +309,14 @@ COMMENT \/\/.*$|\/\*([^*]|\*[^\/])*\*\/
                     strcat(current_type, "const ");
                 }
 
-{NEWLINE}      {
-                    if (semicolon_expected) {
-                        fprintf(error_output, "Line %d: Missing semicolon\n", line_number);
-                        semicolon_expected = 0;
-                        errors++;
-                    }
-                    fprintf(output, "Line Number: %d\n", line_number++);
-                    in_declaration = 0;
-                }
+{NEWLINE} {
+    fprintf(output, "Line Number: %d\n", line_number++);
+    if (!in_function) {
+        in_declaration = 0;
+    }
+}
+
+
 
 {STRING}       { 
                     fprintf(output, "String Literal: %s (Line %d)\n", yytext, line_number);
@@ -330,9 +328,9 @@ COMMENT \/\/.*$|\/\*([^*]|\*[^\/])*\*\/
 
 {KEYWORD}      {
                     fprintf(output, "Keyword: %s (Line %d)\n", yytext, line_number);
-                    if (strcmp(yytext, "class") != 0 && strcmp(yytext, "public") != 0 && 
-                        strcmp(yytext, "private") != 0 && strcmp(yytext, "protected") != 0 &&
-                        strcmp(yytext, "const") != 0) {
+                    if (strcmp(yytext, "class") != 0 && strcmp(yytext, "struct") != 0 &&
+                        strcmp(yytext, "public") != 0 && strcmp(yytext, "private") != 0 && 
+                        strcmp(yytext, "protected") != 0 && strcmp(yytext, "const") != 0) {
                         strcpy(current_type, yytext);
                         in_declaration = 1;
                     }
@@ -347,22 +345,34 @@ COMMENT \/\/.*$|\/\*([^*]|\*[^\/])*\*\/
                     fprintf(output, "Scope Resolution Operator (Line %d)\n", line_number);
                 }
 
-{IDENTIFIER}   {
-                    fprintf(output, "Identifier: %s (Line %d)\n", yytext, line_number);
-                    if (in_declaration) {
-                        add_var(yytext, current_type);
-                        strcpy(current_var, yytext);
-                    } else {
-                        Variable *v = get_var(yytext);
-                        if (!v) {
+{IDENTIFIER} {
+                fprintf(output, "Identifier: %s (Line %d)\n", yytext, line_number);
+                if (in_declaration) {
+                    add_var(yytext, current_type);
+                    strcpy(current_var, yytext);
+                    semicolon_expected = 1; // Expect semicolon after declaration
+                } else {
+                    Variable *v = get_var(yytext);
+                    if (!v) {
+                        int is_type = 0;
+                        for (int i = 0; i < var_count; i++) {
+                            if (strcmp(vars[i].type, yytext) == 0) {
+                                is_type = 1;
+                                break;
+                            }
+                        }
+                        if (!is_type) {
                             fprintf(error_output, "Line %d: Undeclared identifier '%s'\n", line_number, yytext);
                             errors++;
-                        } else {
-                            check_access_violation(yytext);
                         }
-                        strcpy(current_var, yytext);
+                    } else {
+                        check_access_violation(yytext);
                     }
+                    strcpy(current_var, yytext);
+                    semicolon_expected = 1; // Also expect semicolon in expressions
                 }
+            }
+
 
 {NUMBER}       { 
                     fprintf(output, "Number: %s (Line %d)\n", yytext, line_number);
@@ -371,22 +381,47 @@ COMMENT \/\/.*$|\/\*([^*]|\*[^\/])*\*\/
                     }
                 }
 
-{SEMICOLON}    { 
-                    fprintf(output, "Semicolon Detected (Line %d)\n", line_number);
-                    semicolon_expected = 0;
-                    in_declaration = 0;
-                    expecting_value = 0;
-                    strcpy(current_var, "");
+{SEMICOLON} {
+                fprintf(output, "Semicolon Detected (Line %d)\n", line_number);
+                semicolon_expected = 0;
+                in_declaration = 0;
+                expecting_value = 0;
+                strcpy(current_var, "");
+                strcpy(current_type, "");
+                if (in_namespace_std) {
+                    add_std_symbols();
                 }
+            }
 
-{LPAREN}       { fprintf(output, "Left Parenthesis (Line %d)\n", line_number); }
-{RPAREN}       { fprintf(output, "Right Parenthesis (Line %d)\n", line_number); }
-{LBRACE}       { fprintf(output, "Left Brace (Line %d)\n", line_number); }
+
+{LPAREN} {
+    fprintf(output, "Left Parenthesis (Line %d)\n", line_number);
+    if (in_declaration) {
+        in_function = 1;
+        strcpy(current_scope, current_var);
+        semicolon_expected = 0;  
+    }
+}
+
+{RPAREN}       { 
+                    fprintf(output, "Right Parenthesis (Line %d)\n", line_number);
+                    if (in_function) {
+                        in_function = 0;
+                        strcpy(current_scope, "global");
+                    }
+                }
+{LBRACE}       { 
+                    fprintf(output, "Left Brace (Line %d)\n", line_number);
+                    if (in_class) {
+                        strcpy(current_scope, current_class);
+                    }
+                }
 {RBRACE}       { 
                     fprintf(output, "Right Brace (Line %d)\n", line_number);
                     if (in_class) {
                         in_class = 0;
                         strcpy(current_class, "");
+                        strcpy(current_scope, "global");
                     }
                 }
 
@@ -428,6 +463,7 @@ int main(int argc, char *argv[]) {
 
     fprintf(output, "\n--- End of Token List ---\n");
     fprintf(error_output, "\n--- End of Compile-Time Error Report ---\n");
+    fprintf(error_output, "Total errors: %d\n", errors);
 
     fclose(input);
     fclose(output);
