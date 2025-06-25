@@ -1,39 +1,81 @@
 %{
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 
 FILE *output;
 FILE *error_output;
 
 int semicolon_expected = 0;
 int errors = 0;
-int last_was_type = 0;
 int line_number = 1;
+int in_declaration = 0;
+char current_type[50] = "";
+char current_var[50] = "";
+int expecting_value = 0;
 
 #define MAX_VARS 100
-char declared_vars[MAX_VARS][50];
+typedef struct {
+    char name[50];
+    char type[50];
+    int is_initialized;
+    int line_declared;
+} Variable;
+
+Variable vars[MAX_VARS];
 int var_count = 0;
 
-void add_var(char *var) {
+void init_standard_functions() {
+    strcpy(vars[var_count].name, "printf");
+    strcpy(vars[var_count].type, "function");
+    var_count++;
+}
+
+void add_var(const char *var, const char *type) {
     for (int i = 0; i < var_count; i++) {
-        if (strcmp(declared_vars[i], var) == 0) return;
+        if (strcmp(vars[i].name, var) == 0) {
+            return;
+        }
     }
     if (var_count < MAX_VARS) {
-        strcpy(declared_vars[var_count++], var);
+        strcpy(vars[var_count].name, var);
+        strcpy(vars[var_count].type, type);
+        vars[var_count].is_initialized = 0;
+        vars[var_count].line_declared = line_number;
+        var_count++;
     }
 }
 
-int is_declared(char *var) {
+Variable* get_var(const char *var) {
     for (int i = 0; i < var_count; i++) {
-        if (strcmp(declared_vars[i], var) == 0) return 1;
+        if (strcmp(vars[i].name, var) == 0) {
+            return &vars[i];
+        }
     }
-    return 0;
+    return NULL;
 }
+
+void check_type_mismatch(const char *value) {
+    if (current_var[0] != '\0') {
+        Variable *v = get_var(current_var);
+        if (v != NULL) {
+            if (strcmp(v->type, "int") == 0) {
+                if (value[0] == '"') {
+                    fprintf(error_output, "Line %d: Type mismatch - Cannot assign string to int variable '%s'\n", 
+                        line_number, current_var);
+                    errors++;
+                }
+            }
+            v->is_initialized = 1;
+        }
+    }
+}
+
 %}
 
 %option noyywrap
 
-KEYWORD int|return|void|if|else|while|for|float|double|char|long|short|unsigned
+KEYWORD int|return|void|if|else|while|for|float|double|char
 IDENTIFIER [a-zA-Z_][a-zA-Z0-9_]*
 NUMBER [0-9]+
 WS [ \t]+
@@ -43,6 +85,8 @@ LPAREN \(
 RPAREN \)
 LBRACE \{
 RBRACE \}
+STRING \"[^\"]*\"
+EQUALS =
 
 %%
 
@@ -50,6 +94,9 @@ RBRACE \}
 
 "#include"[ \t]*<[^>]+> {
                     fprintf(output, "Header File: %s (Line %d)\n", yytext, line_number);
+                    if (strstr(yytext, "stdio.h")) {
+                        init_standard_functions();
+                    }
                 }
 
 {NEWLINE}      {
@@ -59,43 +106,57 @@ RBRACE \}
                         errors++;
                     }
                     fprintf(output, "Line Number: %d\n", line_number++);
+                    in_declaration = 0;
                 }
 
-{KEYWORD}{WS}+{IDENTIFIER}{WS}*{LPAREN}{RPAREN} {
-                    fprintf(output, "Function Declaration: %s (Line %d)\n", yytext, line_number);
-                    last_was_type = 0;
-                    semicolon_expected = 0;
+{STRING}       { 
+                    fprintf(output, "String Literal: %s (Line %d)\n", yytext, line_number);
+                    if (expecting_value) {
+                        check_type_mismatch(yytext);
+                        expecting_value = 0;
+                    }
                 }
 
 {KEYWORD}      {
                     fprintf(output, "Keyword: %s (Line %d)\n", yytext, line_number);
-                    last_was_type = (strcmp(yytext, "int") == 0 || strcmp(yytext, "void") == 0 ||
-                                     strcmp(yytext, "char") == 0 || strcmp(yytext, "float") == 0 ||
-                                     strcmp(yytext, "double") == 0 || strcmp(yytext, "long") == 0 ||
-                                     strcmp(yytext, "short") == 0 || strcmp(yytext, "unsigned") == 0);
+                    strcpy(current_type, yytext);
+                    in_declaration = 1;
+                }
+
+{EQUALS}       {
+                    fprintf(output, "Assignment Operator: = (Line %d)\n", line_number);
+                    expecting_value = 1;
                 }
 
 {IDENTIFIER}   {
-                    if (last_was_type) {
-                        fprintf(output, "Variable Declaration: %s (Line %d)\n", yytext, line_number);
-                        add_var(yytext);
-                        semicolon_expected = 1;
-                        last_was_type = 0;
+                    fprintf(output, "Identifier: %s (Line %d)\n", yytext, line_number);
+                    if (in_declaration) {
+                        add_var(yytext, current_type);
+                        strcpy(current_var, yytext);
                     } else {
-                        fprintf(output, "Identifier: %s (Line %d)\n", yytext, line_number);
-                        if (!is_declared(yytext)) {
-                            fprintf(error_output, "Line %d: Undeclared variable '%s'\n", line_number, yytext);
+                        Variable *v = get_var(yytext);
+                        if (!v) {
+                            fprintf(error_output, "Line %d: Undeclared identifier '%s'\n", line_number, yytext);
                             errors++;
                         }
-                        semicolon_expected = 1;
+                        strcpy(current_var, yytext);
                     }
                 }
 
-{NUMBER}       { fprintf(output, "Number: %s (Line %d)\n", yytext, line_number); semicolon_expected = 1; }
+{NUMBER}       { 
+                    fprintf(output, "Number: %s (Line %d)\n", yytext, line_number);
+                    if (expecting_value) {
+                        expecting_value = 0;
+                    }
+                }
 
-"="            { fprintf(output, "Assignment Operator: = (Line %d)\n", line_number); semicolon_expected = 1; }
-
-{SEMICOLON}    { fprintf(output, "Semicolon Detected (Line %d)\n", line_number); semicolon_expected = 0; }
+{SEMICOLON}    { 
+                    fprintf(output, "Semicolon Detected (Line %d)\n", line_number);
+                    semicolon_expected = 0;
+                    in_declaration = 0;
+                    expecting_value = 0;
+                    strcpy(current_var, "");
+                }
 
 {LPAREN}       { fprintf(output, "Left Parenthesis (Line %d)\n", line_number); }
 {RPAREN}       { fprintf(output, "Right Parenthesis (Line %d)\n", line_number); }

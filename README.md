@@ -1,85 +1,176 @@
-<<<<<<< HEAD
-# Static Code Analyzer Project
+# Static Code Analyzer
 
-A modern static code analyzer with a graphical user interface that helps detect potential issues in C, C++, and Python code files.
+A static code analyzer that can analyze C, C++, and Python code for potential errors and code quality issues.
 
 ## Features
 
-- Modern graphical user interface built with Tkinter
-- Support for analyzing C, C++, and Python files
-- Automatic language detection
-- Real-time analysis feedback
-- Clean and intuitive results display
+- Support for multiple programming languages:
+  - C
+  - C++
+  - Python
+- Modern GUI interface
+- Real-time error detection
+- Syntax highlighting
+- Type checking
+- Variable declaration and usage analysis
 
 ## Prerequisites
 
-- Python 3.x
-- GCC compiler (for C/C++ analysis)
-- Make utility
+1. GCC (GNU Compiler Collection)
+2. Flex (Fast Lexical Analyzer)
+3. Python 3.x
+4. Required Python packages:
+   ```
+   pip install -r requirements.txt
+   ```
 
 ## Installation
 
-1. Clone the repository:
-```bash
-git clone https://github.com/DivyanshuDhasmana/Static-Code-Analyzer-Project.git
-cd Static-Code-Analyzer-Project
+1. Install Flex:
+   - Download from: http://gnuwin32.sourceforge.net/packages/flex.htm
+   - Or install using winget: `winget install GnuWin32.Flex`
+   - Default installation path: `C:\Program Files (x86)\GnuWin32\bin`
+
+2. Install Python dependencies:
+   ```powershell
+   pip install -r requirements.txt
+   ```
+
+## Compilation Instructions
+
+### If Flex is installed and in PATH:
+
+```powershell
+# Compile C Analyzer
+flex lex_c.l
+gcc lex.yy.c -o lex_c.exe
+
+# Compile C++ Analyzer
+flex lex_cpp.l
+gcc lex.yy.c -o lex_cpp.exe
+
+# Compile Python Analyzer
+flex lex_python.l
+gcc lex.yy.c -o lex_python.exe
 ```
 
-2. Install the required Python dependencies:
-```bash
-pip install -r requirements.txt
+### If Flex is installed but not in PATH:
+
+```powershell
+# Compile C Analyzer
+& 'C:\Program Files (x86)\GnuWin32\bin\flex.exe' 'lex_c.l'
+gcc lex.yy.c -o lex_c.exe
+
+# Compile C++ Analyzer
+& 'C:\Program Files (x86)\GnuWin32\bin\flex.exe' 'lex_cpp.l'
+gcc lex.yy.c -o lex_cpp.exe
+
+# Compile Python Analyzer
+& 'C:\Program Files (x86)\GnuWin32\bin\flex.exe' 'lex_python.l'
+gcc lex.yy.c -o lex_python.exe
 ```
 
-3. Build the project:
-```bash
-make
-```
+## Running the Application
 
-## Usage
+1. **Using the GUI (Recommended)**:
+   ```powershell
+   python analyzer_ui.py
+   ```
 
-There are two ways to use the Static Code Analyzer:
+2. **Using Individual Analyzers**:
+   ```powershell
+   # For C files
+   ./lex_c.exe <input_file.c>
 
-### 1. Graphical User Interface (Recommended)
+   # For C++ files
+   ./lex_cpp.exe <input_file.cpp>
 
-Run the GUI version:
-```bash
-python analyzer_ui.py
-```
+   # For Python files
+   ./lex_python.exe <input_file.py>
+   ```
 
-With the GUI you can:
-- Click "Browse" to select a code file
-- View the automatically detected programming language
-- Click "Analyze Code" to run the analysis
-- View results in the scrollable text area
+## Output Files
 
-### 2. Command Line Interface
+The analyzers generate two output files in the `output` directory:
+- `result.txt`: Contains the token analysis
+- `errors.txt`: Contains any errors found during analysis
 
-For command-line usage:
-```bash
-main.exe <path_to_file>
-```
+## Example Usage
 
-## Supported File Types
+1. **C++ Example**:
+   ```cpp
+   #include <iostream>
+   using namespace std;
 
-- C files (*.c)
-- C++ files (*.cpp)
-- Python files (*.py)
+   int main() {
+       string name = "Alice";
+       cout << "Hello, " << name << endl;
+       return 0;
+   }
+   ```
+
+2. **Python Example**:
+   ```python
+   def greet(name):
+       print("Hello,", name)
+
+   greet("World")
+   ```
+
+## Features Supported
+
+### C++ Analyzer
+- Standard library support (iostream, string, etc.)
+- Namespace handling
+- Class and object-oriented features
+- Template syntax
+- Access specifiers (public, private, protected)
+- Stream operators
+- Reference types
+
+### Python Analyzer
+- Built-in functions and types
+- Indentation-based scope handling
+- Dynamic typing
+- Function definitions
+- Class definitions
+- Import statements
+- String literals (both single and double quotes)
+
+### C Analyzer
+- Standard library functions
+- Type checking
+- Variable declarations
+- Function definitions
+- Preprocessor directives
+
+## Troubleshooting
+
+1. **Flex not found error**:
+   - Make sure Flex is installed
+   - Use the full path to flex.exe as shown in the compilation instructions
+
+2. **Output directory issues**:
+   - Ensure the `output` directory exists
+   - Make sure you have write permissions
+
+3. **Compilation errors**:
+   - Make sure GCC is installed and in your PATH
+   - Check that all source files are in the correct location
 
 ## Project Structure
 
-- `analyzer_ui.py` - The main GUI application
-- `detect_lang.py` - Language detection module
-- `main.c` - Core analyzer implementation
-- `lex_c.l`, `lex_cpp.l`, `lex_python.l` - Lexical analyzers for different languages
-- `Makefile` - Build configuration
-
-## Building from Source
-
-The project uses Make for building the C/C++ components:
-
-```bash
-make clean  # Clean previous builds
-make        # Build the project
+```
+.
+├── analyzer_ui.py      # GUI interface
+├── lex_c.l            # C lexical analyzer
+├── lex_cpp.l          # C++ lexical analyzer
+├── lex_python.l       # Python lexical analyzer
+├── detect_lang.py     # Language detection module
+├── requirements.txt   # Python dependencies
+└── output/           # Analysis output directory
+    ├── result.txt    # Token analysis results
+    └── errors.txt    # Error reports
 ```
 
 ## Contributing
@@ -92,7 +183,4 @@ make        # Build the project
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details. 
-=======
-# Static-Code-Analyzer-Project
->>>>>>> 11a32da2a3cce4896f6d02ccef49dd9145ccf1db
+This project is licensed under the MIT License - see the LICENSE file for details.
