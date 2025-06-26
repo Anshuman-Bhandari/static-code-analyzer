@@ -348,7 +348,7 @@ int main(int argc, char *argv[]) {
     yylex();
 
     fprintf(output, "\n--- End of Token List ---\n");
-    fprintf(error_output, "\n--- End of Compile-Time Error Report ---\n");
+    fprintf(error_output, "\n--- End of Compile-Time Error ---\n");
 
     fclose(input);
     fclose(output);
